@@ -1,0 +1,10 @@
+sudo systemctl start postgresql
+sudo systemctl status postgresql
+
+
+
+to get help using:
+
+prog -h
+prog --help
+man prog

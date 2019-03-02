@@ -1,0 +1,141 @@
+/  app_token :
+
+-- Table: public.app_tokens
+
+-- DROP TABLE public.app_tokens;
+
+CREATE TABLE public.app_tokens
+(
+    id uuid NOT NULL,
+    username text COLLATE pg_catalog."default" NOT NULL,
+    expiration_date integer NOT NULL,
+    CONSTRAINT token_id PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.app_tokens;
+
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++==
+
+
+Comment Table :
+
+
+-- Table: public.comments
+
+-- DROP TABLE public.comments;
+
+CREATE TABLE public.comments
+(
+    id uuid NOT NULL,
+    message text COLLATE pg_catalog."default" NOT NULL,
+    post_id uuid NOT NULL,
+    creator text COLLATE pg_catalog."default" NOT NULL,
+    creation_date integer NOT NULL,
+    CONSTRAINT comment_id PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.comments;
+
+
+
+
++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Likes Table:
+
+
+-- Table: public.likes
+
+-- DROP TABLE public.likes;
+
+CREATE TABLE public.likes
+(
+    id uuid NOT NULL,
+    post_id uuid NOT NULL,
+    creator text COLLATE pg_catalog."default" NOT NULL,
+    count integer,
+    creation_date integer NOT NULL,
+    CONSTRAINT like_id PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.likes;
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Posts Table:
+
+
+-- Table: public.posts
+
+-- DROP TABLE public.posts;
+
+CREATE TABLE public.posts
+(
+    id uuid NOT NULL,
+    creation_date integer NOT NULL,
+    title text COLLATE pg_catalog."default" NOT NULL,
+    body text COLLATE pg_catalog."default",
+    likes integer,
+    creator text COLLATE pg_catalog."default" NOT NULL,
+    modification_date integer,
+    modifier text COLLATE pg_catalog."default",
+    pictures_id text[] COLLATE pg_catalog."default",
+    CONSTRAINT post_id PRIMARY KEY (id)
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.posts;
+
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Users Table:
+
+
+-- Table: public.users
+
+-- DROP TABLE public.users;
+
+CREATE TABLE public.users
+(
+    id uuid NOT NULL,
+    username text COLLATE pg_catalog."default" NOT NULL,
+    password text COLLATE pg_catalog."default" NOT NULL,
+    creator text COLLATE pg_catalog."default" NOT NULL,
+    creation_date integer NOT NULL,
+    modifier text COLLATE pg_catalog."default",
+    modification_date integer,
+    CONSTRAINT user_id PRIMARY KEY (id),
+    CONSTRAINT username UNIQUE (username)
+
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.users;
+
+
