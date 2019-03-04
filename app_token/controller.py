@@ -1,8 +1,10 @@
 import json
+import random
 from uuid import uuid4
 import logging
 from log import Msg
 from helper import Now, Http_error, value
+from send_message.send_message import send_message
 from .model import APP_Token
 
 token_expiration_interval = value('token_expiration_interval', '120')
@@ -91,3 +93,10 @@ def get_current_token(db_session, username):
         filter(APP_Token.username == username,
                APP_Token.expiration_date > Now()).first()
     return token
+
+def create_login_pass(cell_no,username,db_session):
+    password = random.randint(1000, 9999)
+    message = 'با سلام    کد ورود شما به اپلیکیشن Bellezza :  {}'.format(password)
+    data = {'cell_no': cell_no, 'message':message}
+    sent_data = send_message(data,username,db_session)
+    return sent_data
