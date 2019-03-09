@@ -4,6 +4,8 @@ from uuid import uuid4
 import logging
 
 from bottle import static_file, response
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import Any
 
 from log import Msg
 from helper import Now, model_to_dict, Http_error, file_mime_type
@@ -17,6 +19,10 @@ save_path = os.environ.get('save_path')
 def add(db_session, data, username):
     logging.info(Msg.START)
 
+    if data.get('category') is None:
+        logging.error(Msg.DATA_MISSING + ' category is not in data')
+        raise Http_error(400, {'category': Msg.DATA_MISSING})
+
     model_instance = Post()
     model_instance.id = str(uuid4())
     model_instance.title = data.get('title')
@@ -25,6 +31,17 @@ def add(db_session, data, username):
     model_instance.creation_date = Now()
     model_instance.creator = username
     model_instance.pictures_id = []
+
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
+
+    categories = (data.get('category')).split(',')
+    for item in categories:
+        item.strip()
+    model_instance.category = categories
 
     # logging.debug(Msg.DATA_ADDITION+"  || Data :"+json.dumps(data))
     if ('upload' not in data) or (data['upload'] is None):
@@ -53,8 +70,7 @@ def add(db_session, data, username):
     return model_instance
 
 
-def get(id, db_session, username):
-    logging.info(Msg.START + "user is {}".format(username))
+def get(id, db_session):
     model_instance = db_session.query(Post).filter(Post.id == id).first()
     if model_instance:
         logging.info(Msg.MODEL_GETTING)
@@ -107,15 +123,14 @@ def delete(id, db_session, username):
     return {}
 
 
-def get_all(db_session, username):
-    logging.info(Msg.START + "user is {}".format(username))
-    try:
-        result = db_session.query(Post).order_by(
-            Post.creation_date.desc()).all()
-        logging.debug(Msg.GET_SUCCESS)
-    except:
-        logging.error(Msg.GET_FAILED)
-        raise Http_error(500, Msg.GET_FAILED)
+def get_all(db_session):
+    result = db_session.query(Post).order_by(Post.creation_date.desc()).all()
+
+    if result is None:
+        logging.error(Msg.NOT_FOUND)
+        raise Http_error(400, {'post': Msg.NOT_FOUND})
+
+    logging.debug(Msg.GET_SUCCESS)
 
     logging.debug(Msg.END)
     return result
@@ -123,13 +138,49 @@ def get_all(db_session, username):
 
 def get_user_posts(db_session, username):
     logging.info(Msg.START + "user is {}".format(username))
-    try:
-        result = db_session.query(Post).filter(
-            Post.creator == username).order_by(Post.creation_date.desc()).all()
-        logging.debug(Msg.GET_SUCCESS)
-    except:
+    result = db_session.query(Post).filter(Post.creator == username).order_by(
+        Post.creation_date.desc()).all()
+
+    if result is None:
         logging.error(Msg.GET_FAILED)
-        raise Http_error(500, Msg.GET_FAILED)
+        raise Http_error(404, {'post': Msg.NOT_FOUND})
+
+    logging.debug(Msg.GET_SUCCESS)
+
+    logging.debug(Msg.END)
+    return result
+
+
+def get_category_posts(category_id, db_session):
+    logging.info(Msg.START)
+
+    result = db_session.query(Post).filter(
+        Post.category.op('@>')([category_id])).order_by(
+        Post.creation_date.desc()).all()
+
+    if result is None:
+        logging.error(Msg.GET_FAILED)
+        raise Http_error(404, {'post': Msg.NOT_FOUND})
+
+    logging.debug(Msg.GET_SUCCESS)
+
+    logging.debug(Msg.END)
+    return result
+
+
+def get_tags_posts(data, db_session):
+    logging.info(Msg.START)
+    tags = data.get('tags') or []
+
+    result = db_session.query(Post).filter(
+        Post.tags.op('@>')(tags)).order_by(
+        Post.creation_date.desc()).all()
+
+    if result is None:
+        logging.error(Msg.GET_FAILED)
+        raise Http_error(404, {'post': Msg.NOT_FOUND})
+
+    logging.debug(Msg.GET_SUCCESS)
 
     logging.debug(Msg.END)
     return result
@@ -138,13 +189,6 @@ def get_user_posts(db_session, username):
 def edit(id, db_session, data, username):
     logging.info(
         Msg.START + "user is {}  ".format(username) + "post_id = {}".format(id))
-
-    if "id" in data.keys():
-        del data["id"]
-    if "upload" in data.keys():
-        logging.debug(Msg.UPLOAD_NOT_ALLOWED + " post_id = {}".format(id))
-        raise Http_error(400, Msg.UPLOAD_NOT_ALLOWED)
-
     model_instance = get(id, db_session, username)
     if model_instance:
         logging.debug(
@@ -156,6 +200,31 @@ def edit(id, db_session, data, username):
     if username != model_instance.creator:
         logging.error(Msg.ALTERING_AUTHORITY_FAILED)
         raise Http_error(403, Msg.ALTERING_AUTHORITY_FAILED)
+
+    if data.get('category') is None:
+        logging.error(Msg.DATA_MISSING + ' category is not in data')
+        raise Http_error(400, {'category': Msg.DATA_MISSING})
+
+    if "id" in data.keys():
+        del data["id"]
+
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
+
+    categories = (data.get('category')).split(',')
+    for item in categories:
+        item.strip()
+    model_instance.category = categories
+
+    del (data['category'])
+    del (data['tags'])
+
+    if "upload" in data.keys():
+        logging.debug(Msg.UPLOAD_NOT_ALLOWED + " post_id = {}".format(id))
+        raise Http_error(400, Msg.UPLOAD_NOT_ALLOWED)
 
     for key, value in data.items():
         # TODO  if key is valid attribute of class

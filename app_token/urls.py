@@ -1,4 +1,4 @@
-from .controller import add, get, get_all, delete, create_login_pass
+from .controller import add, get, get_all, delete
 from helper import check_auth, inject_db, jsonify, pass_data
 
 
@@ -11,6 +11,3 @@ def call_router(app):
     app.route('/tokens', 'GET', get_all, apply=wrappers)
     app.route('/tokens/<id>', 'DELETE', delete, apply=[check_auth, inject_db])
     app.route('/tokens', 'POST', add, apply=data_plus_wrappers)
-
-    app.route('/login-password/<cell_no>', 'GET', create_login_pass,
-              apply=wrappers)

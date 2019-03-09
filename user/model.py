@@ -10,6 +10,7 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     creator = Column(String, nullable=False)
+    name = Column(String, nullable=False)
     creation_date = Column(Integer, nullable=False)
     modification_date = Column(Integer)
     modifier = Column(String)
