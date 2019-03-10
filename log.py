@@ -54,9 +54,24 @@ class Msg:
     UNLIKED_POST = 'post {} is unliked by {} '
     USER_XISTS = 'user by this username ={} already exists'
     PARENT_INVALID = 'parent entity doesnt exist'
+    CHECK_REDIS_FOR_EXISTANCE = 'checking redis if cell number already ' \
+                                'exists...'
+    REGISTER_XISTS = 'user has already valid registery code'
+    CHECK_USER_EXISTANCE = 'checking user if already exists'
+    GENERATING_REGISTERY_CODE = 'generating key for registering process for ' \
+                                'cell no : {}'
+    SEND_CODE_BY_SMS = 'registery activation_code is going to send for user by SMS'
+    SMS_SENT = 'message sent to user by cell no : {}'
+    DATA_MISSING = 'required data doesnt exists in data : {}'
+    REGISTER_KEY_INVALID = 'your register activation_code is wrong '
+    REGISTER_KEY_DOESNT_EXIST = 'the activation_code expired or doesnt exist '
+    USR_ADDING = 'user is going to create...'
+    NAME_NOT_UNIQUE = 'name must be unique.this name already exists'
+    NOT_UNIQUE = 'must be unique,change it please'
+    NOT_ACCESSED ='this user can not access to this section'
 
 
-
-def logger(mood, message, func_name, func_path=None):
-    if mood == "info":
-        logging.info(message, func_name, func_path)
+#
+# def logger(mood, message, func_name, func_path=None):
+#     if mood == "info":
+#         logging.info(message, func_name, func_path)

@@ -15,9 +15,10 @@ import json
 
 
 def model_to_dict(obj):
-    object_dict = dict((name, getattr(obj, name))
-                       for name in dir(obj)
-                       if not name.startswith('_'))
+    object_dict = dict((name, getattr(obj, name)) for name in dir(obj) if
+                       not name.startswith('_')) if not isinstance(obj,
+                                                                   dict) else obj
+
     if "metadata" in object_dict:
         del object_dict['metadata']
     print(object_dict)
@@ -43,7 +44,7 @@ def check_Authorization():
     db_session = get_db_session()
     auth = request.get_header('Authorization')
     if auth is None:
-        raise Http_error(401,'no auth found')
+        raise Http_error(401, 'no auth found')
 
     username, password = decode(auth)
     print(username, password)
@@ -56,7 +57,7 @@ def check_Authorization():
                                              User.password == password).first()
 
         if user is None:
-            raise Http_error(400, "no such user")
+            raise Http_error(401, {'username':'not valid'})
         return model_to_dict(user)
 
 
@@ -102,7 +103,8 @@ def decode(encoded_str):
             print(split[0].strip())
             print(split[1].strip())
             username, password = split[1].strip(), None
-            logging.debug("token is {} and pass is {}".format(username,password))
+            logging.debug(
+                "token is {} and pass is {}".format(username, password))
         else:
             raise Http_error(400, " Bearer authentication decoding failed")
 
@@ -159,7 +161,7 @@ def jsonify(func):
 
 def pass_data(func):
     def wrapper(*args, **kwargs):
-        if request.json :
+        if request.json:
             kwargs['data'] = request.json
         elif request.forms:
             my_data = {}
@@ -167,12 +169,9 @@ def pass_data(func):
             for key in data_list.keys():
                 my_data[key] = data_list[key][0]
             if (request.files != None) and (request.files.dict != None):
-
                 my_data['upload'] = request.files.dict.get('upload')
 
             kwargs['data'] = my_data
-
-
 
         rtn = func(*args, **kwargs)
         return rtn
@@ -186,11 +185,10 @@ def Now():
 
 
 def Http_error(code, message):
-    result = HTTPResponse(
-        body=json.dumps({'error': message}),
-        status=code,
-        headers={'Content-type': 'application/json'}
-    )
+    if isinstance(message,str):
+        message = {'error':message}
+    result = HTTPResponse(body=json.dumps(message), status=code,
+        headers = {'Content-type': 'application/json'})
     return result
 
 
@@ -201,17 +199,13 @@ def value(name, default):
 def validate_token(id, db_session):
     result = db_session.query(APP_Token).filter(APP_Token.id == id).first()
     if result is None or result.expiration_date < Now():
-        raise Http_error(401, Msg.TOKEN_INVALID)
+        raise Http_error(401,{"id":Msg.TOKEN_INVALID} )
     return result
+
 
 def file_mime_type(filename):
     # m = magic.open(magic.MAGIC_MIME)
-    m = magic.from_file(filename,mime=True)
+    m = magic.from_file(filename, mime=True)
     print(m)
 
-
     return str(m)
-
-
-
-

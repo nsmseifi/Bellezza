@@ -5,21 +5,50 @@ from uuid import uuid4
 from log import Msg
 from helper import Now, model_to_dict, Http_error
 from .model import User
+from app_redis import app_redis as redis
 
 
-def add(db_session, data, username):
+def add(db_session, data):
     logging.info(Msg.START )
-    user = db_session.query(User).filter(User.username == data.get(
-        'username')).first()
+    cell_no = data.get('cell_no')
+    name = data.get('name')
+    user = db_session.query(User).filter(User.username == cell_no).first()
     if user:
-        raise Http_error(403, Msg.USER_XISTS.format(data.get('username')))
+        logging.error(Msg.USER_XISTS.format(cell_no))
+        raise Http_error(409, {"cell_no": Msg.USER_XISTS.format(cell_no)})
+
+    logging.debug(Msg.CHECK_REDIS_FOR_EXISTANCE)
+
+    activation_code = redis.get(cell_no)
+    if activation_code is None:
+        logging.error(Msg.REGISTER_KEY_DOESNT_EXIST)
+        raise Http_error(404,{"activation_code": Msg.REGISTER_KEY_DOESNT_EXIST})
+
+    activation_code = activation_code.decode("utf-8")
+    if activation_code != data.get('activation_code'):
+        logging.error(Msg.REGISTER_KEY_INVALID)
+        raise Http_error(400,{"activation_code":Msg.REGISTER_KEY_INVALID})
+
+    user_by_name = db_session.query(User).filter(User.name == name).first()
+    if user_by_name !=None:
+        logging.error(Msg.NAME_NOT_UNIQUE)
+        raise Http_error(409,{"name":Msg.NAME_NOT_UNIQUE})
+
+    logging.debug(Msg.USR_ADDING)
 
     model_instance = User()
-    model_instance.username = data.get('username')
+    model_instance.username = cell_no
     model_instance.password = data.get('password')
+    model_instance.name = name
     model_instance.id = str(uuid4())
     model_instance.creation_date = Now()
-    model_instance.creator = username
+    model_instance.creator = data.get('cell_no')
+
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
 
     logging.debug(Msg.DATA_ADDITION)
 
@@ -42,7 +71,7 @@ def get(id, db_session, username):
                       json.dumps(model_to_dict(model_instance)))
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(404, Msg.NOT_FOUND)
+        raise Http_error(404, {"id":Msg.NOT_FOUND})
 
     logging.error(Msg.GET_FAILED + json.dumps({"id": id}))
 
@@ -50,6 +79,21 @@ def get(id, db_session, username):
 
     return model_instance
 
+def get_profile(username, db_session):
+    logging.info(Msg.START
+                 + "user is {}  ".format(username))
+    logging.debug(Msg.MODEL_GETTING)
+    model_instance = db_session.query(User).filter(User.username == username).first()
+    if model_instance:
+        logging.debug(Msg.GET_SUCCESS +
+                      json.dumps(model_to_dict(model_instance)))
+    else:
+        logging.debug(Msg.MODEL_GETTING_FAILED)
+        raise Http_error(401, {"username":Msg.NOT_FOUND})
+
+    logging.info(Msg.END)
+
+    return model_instance
 
 def delete(id, db_session, username):
     logging.info(Msg.START + "user is {}  ".format(username)
@@ -103,7 +147,15 @@ def edit(id, db_session, data, username):
         logging.debug(Msg.MODEL_GETTING)
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(404, Msg.NOT_FOUND)
+        raise Http_error(404, {"id":Msg.NOT_FOUND})
+
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
+
+        del data['tags']
 
     for key, value in data.items():
         # TODO  if key is valid attribute of class

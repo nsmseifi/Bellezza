@@ -27,6 +27,7 @@ def add(db_session, data, username):
 
     logging.debug(Msg.DATA_ADDITION)
 
+
     db_session.add(model_instance)
 
     logging.debug(Msg.DB_ADD + json.dumps(model_to_dict(model_instance)))

@@ -97,6 +97,8 @@ CREATE TABLE public.posts
     modification_date integer,
     modifier text COLLATE pg_catalog."default",
     pictures_id text[] COLLATE pg_catalog."default",
+    tags text[] COLLATE pg_catalog."default",
+    category text[] COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT post_id PRIMARY KEY (id)
 )
 WITH (
@@ -124,6 +126,7 @@ CREATE TABLE public.users
     username text COLLATE pg_catalog."default" NOT NULL,
     password text COLLATE pg_catalog."default" NOT NULL,
     creator text COLLATE pg_catalog."default" NOT NULL,
+    name text COLLATE pg_catalog."default" NOT NULL,
     creation_date integer NOT NULL,
     modifier text COLLATE pg_catalog."default",
     modification_date integer,
@@ -137,5 +140,41 @@ WITH (
 TABLESPACE pg_default;
 
 ALTER TABLE public.users;
+
+
++++++++++++++++++++++++++++++++++++++
+CATEGORY:
+
+
+-- Table: public.categories
+
+-- DROP TABLE public.categories;
+
+CREATE TABLE public.categories
+(
+    id uuid NOT NULL,
+    title text COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    creator text COLLATE pg_catalog."default" NOT NULL,
+    creation_date text COLLATE pg_catalog."default" NOT NULL,
+    modifier text COLLATE pg_catalog."default",
+    modification_date text COLLATE pg_catalog."default",
+    image text COLLATE pg_catalog."default" NOT NULL,
+    tags text[] COLLATE pg_catalog."default",
+    CONSTRAINT category_id PRIMARY KEY (id),
+    CONSTRAINT category_title UNIQUE (title)
+
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.categories;
+
+
+
+
+
 
 

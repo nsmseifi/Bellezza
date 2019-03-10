@@ -1,5 +1,5 @@
 from sqlalchemy import String, Column, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from db_session import Base
 
 
@@ -10,8 +10,10 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     creator = Column(String, nullable=False)
+    name = Column(String, nullable=False)
     creation_date = Column(Integer, nullable=False)
     modification_date = Column(Integer)
     modifier = Column(String)
+    tags = Column(ARRAY(String))
 
 

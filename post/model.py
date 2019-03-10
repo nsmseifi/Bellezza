@@ -16,6 +16,8 @@ class Post(Base):
     modification_date = Column(Integer)
     modifier = Column(String)
     pictures_id = Column(ARRAY(String))
+    category = Column(ARRAY(String), nullable=False)
+    tags = Column(ARRAY(String))
 #
 #
 # class PostPicture(Base, Image):
