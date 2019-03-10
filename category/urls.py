@@ -7,12 +7,12 @@ def call_router(app):
     data_plus_wrappers = (wrappers[:])
     data_plus_wrappers.append(pass_data)
 
-    app.route('/categories/<category_id>', 'GET', get, apply=[inject_db, jsonify])
-    app.route('/categories/<category_id>', 'DELETE', delete, apply=[check_auth,
+    app.route('/categories/<category_title>', 'GET', get, apply=[inject_db, jsonify])
+    app.route('/categories/<category_title>', 'DELETE', delete, apply=[check_auth,
                                                              inject_db])
     app.route('/categories', 'POST', add, apply=data_plus_wrappers)
     app.route('/categories/_search', 'POST', get_all, apply=[inject_db,
                                                              jsonify])
-    app.route('/categories/<category_id>', 'PUT', edit, apply=data_plus_wrappers)
+    app.route('/categories/<category_title>', 'PUT', edit, apply=data_plus_wrappers)
 
 

@@ -6,6 +6,7 @@ from uuid import uuid4
 from log import Msg
 from helper import Now, model_to_dict, Http_error, value
 from .model import Category
+from tag.controller import get as get_tag
 
 save_path = os.environ.get('save_path')
 admin = value('admin_username', 'admin')
@@ -40,7 +41,13 @@ def add(data, username, db_session):
         tags = (data.get('tags')).split(',')
         for item in tags:
             item.strip()
+            tag = get_tag(item, db_session)
+            if item != tag.title:
+                logging.error(Msg.INVALID_TAG)
+                raise Http_error(404,{item:Msg.INVALID_TAG})
+
         model_instance.tags = tags
+
     if ('upload' not in data) or (data['upload'] is None):
         logging.error(Msg.DATA_MISSING + 'image is not uploaded')
         raise Http_error(400, {'upload': Msg.DATA_MISSING})
@@ -68,43 +75,43 @@ def add(data, username, db_session):
     return model_instance
 
 
-def get(category_id, db_session):
-    logging.info(Msg.START + 'getting category_id = {}'.format(category_id))
+def get(category_title, db_session):
+    logging.info(Msg.START + 'getting category_title = {}'.format(category_title))
     logging.debug(Msg.MODEL_GETTING)
     model_instance = db_session.query(Category).filter(
-        Category.id == category_id).first()
+        Category.title == category_title).first()
     if model_instance:
         logging.debug(
             Msg.GET_SUCCESS + json.dumps(model_to_dict(model_instance)))
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(404, {'id': Msg.NOT_FOUND})
+        raise Http_error(404, {category_title: Msg.INVALID_CATEGORY})
 
     logging.info(Msg.END)
 
     return model_instance
 
 
-def delete(category_id, db_session, username):
+def delete(category_title, db_session, username):
     logging.info(
-        Msg.START + 'user is {}  '.format(username) + 'category_id= {}'.format(
-            id))
+        Msg.START + 'user is {}  '.format(username) + 'category_title= {}'.format(
+            category_title))
     if username != admin:
         logging.error(Msg.NOT_ACCESSED)
         raise Http_error(401, {'username': Msg.NOT_ACCESSED})
 
-    logging.debug(Msg.DELETE_REQUEST + 'category_id= {}'.format(category_id))
+    logging.debug(Msg.DELETE_REQUEST + 'category_title= {}'.format(category_title))
 
     logging.debug(Msg.MODEL_GETTING)
 
-    model_instance = db_session.query(Category).filteer(
-        Category.id == category_id).first()
+    model_instance = db_session.query(Category).filter(
+        Category.title == category_title).first()
     if model_instance is None:
         logging.error(
-            Msg.NOT_FOUND + ' category by id = {}'.format(category_id))
-        raise Http_error(404, {'category': Msg.NOT_FOUND})
+            Msg.NOT_FOUND + ' category by title = {}'.format(category_title))
+        raise Http_error(404, {'category': Msg.INVALID_CATEGORY})
 
-    db_session.query(Category).filter(Category.id == category_id).delete()
+    db_session.query(Category).filter(Category.title == category_title).delete()
 
     logging.debug(Msg.DELETE_SUCCESS)
 
@@ -131,24 +138,29 @@ def get_all(db_session):
     return result
 
 
-def edit(category_id, data, db_session, username):
+def edit(category_title, data, db_session, username):
     logging.debug(Msg.EDIT_REQUST)
     logging.info(Msg.START + ' user is {}'.format(username))
     if username != admin:
         logging.error(Msg.NOT_ACCESSED)
         raise Http_error(401, {'username': Msg.NOT_ACCESSED})
 
-    model_instance = get(category_id, db_session)
+    model_instance = get(category_title, db_session)
     if model_instance:
         logging.debug(Msg.MODEL_GETTING)
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(404, {'id': Msg.NOT_FOUND})
+        raise Http_error(404, {category_title: Msg.NOT_FOUND})
 
     if data.get('tags') is not None:
         tags = (data.get('tags')).split(',')
         for item in tags:
-            item = item.strip()
+            item.strip()
+            tag = get_tag(item, db_session)
+            if item != tag.title:
+                logging.error(Msg.INVALID_TAG)
+                raise Http_error(404, {item: Msg.INVALID_TAG})
+
         model_instance.tags = tags
         del data['tags']
 

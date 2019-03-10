@@ -36,9 +36,8 @@ def add(db_session, data, username):
     return model_instance
 
 
-def get(id, db_session, username):
-    logging.info(Msg.START + "user is {}  ".format(
-        username) + "getting user_id = {}".format(id))
+def get(id, db_session):
+    logging.info(Msg.START + "getting comment_id = {}".format(id))
     logging.debug(Msg.MODEL_GETTING)
     model_instance = db_session.query(Comment).filter(Comment.id == id).first()
     if model_instance:
@@ -80,11 +79,11 @@ def delete(id, db_session, username):
     return {}
 
 
-def get_all(post_id, data, db_session, username):
-    logging.info(Msg.START + "user is {}".format(username))
+def get_all( data, db_session):
+    logging.info(Msg.START  )
 
     logging.debug(Msg.GET_ALL_REQUEST + "Comments...")
-
+    post_id = data.get('post_id')
     post = db_session.query(Post).filter(Post.id == post_id).first()
     if post is None:
         logging.error(Msg.PARENT_INVALID)
@@ -93,12 +92,21 @@ def get_all(post_id, data, db_session, username):
     if data.get('time') is None:
         data['time'] = Now()
     if data.get('count_number') is None:
-        data['count_number'] = 20
+        data['count_number'] = 50
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400,{'scroll': Msg.SCROLL_UNDEFINED})
 
-    result = db_session.query(Comment).filter(and_(Comment.post_id == post_id,
-                                                   Comment.creation_date < data.get(
-                                                       'time'))).order_by(
-        Comment.creation_date.desc()).limit(data.get('count_number')).all()
+    if data['scroll'] == 'down':
+        result = db_session.query(Comment).filter(and_(Comment.post_id == post_id,
+                                                       Comment.creation_date < data.get(
+                                                           'time'))).order_by(
+            Comment.creation_date.desc()).limit(data.get('count_number')).all()
+    else:
+        result = db_session.query(Comment).filter(
+            and_(Comment.post_id == post_id,
+                 Comment.creation_date > data.get('time'))).order_by(
+            Comment.creation_date.desc()).limit(data.get('count_number')).all()
 
     logging.debug(Msg.GET_SUCCESS)
 
@@ -114,16 +122,16 @@ def edit(id, db_session, data, username):
 
     logging.debug(Msg.EDIT_REQUST)
 
-    model_instance = get(id, db_session, username)
+    model_instance = get(id, db_session)
     if model_instance:
         logging.debug(Msg.MODEL_GETTING)
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(404, Msg.NOT_FOUND)
+        raise Http_error(404, {'comment':Msg.NOT_FOUND})
 
     if model_instance.creator != username:
         logging.error(Msg.ALTERING_AUTHORITY_FAILED)
-        raise (403, Msg.ALTERING_AUTHORITY_FAILED)
+        raise Http_error(403, {'creator':Msg.ALTERING_AUTHORITY_FAILED})
 
     for key, value in data.items():
         # TODO  if key is valid attribute of class

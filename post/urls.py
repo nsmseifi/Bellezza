@@ -11,14 +11,15 @@ def call_router(app):
     app.route('/posts/<id>', 'GET', get, apply=[inject_db, jsonify])
     app.route('/posts/_search', 'POST', get_all, apply=[inject_db, jsonify,
                                                         pass_data])
-    app.route('/posts/user/<username>', 'GET', get_user_posts,
-              apply=[inject_db, jsonify])
+    app.route('/posts/user', 'POST', get_user_posts,
+              apply=[inject_db, jsonify, pass_data])
     app.route('/posts/<id>', 'DELETE', delete, apply=[check_auth, inject_db])
     app.route('/posts', 'POST', add, apply=data_plus_wrappers)
     app.route('/posts/<id>', 'PUT', edit, apply=data_plus_wrappers)
     app.route('/serve-files/<filename>', 'GET', return_file, apply=[inject_db])
-    app.route('/posts/category/<category_id>', 'GET', get_category_posts,
-              apply=[inject_db, jsonify])
+    app.route('/posts/category', 'POST', get_category_posts,
+              apply=[inject_db, jsonify, pass_data
+                     ])
 
     app.route('/posts/tags', 'POST', get_tags_posts,
               apply=[inject_db, jsonify, pass_data])

@@ -2,6 +2,8 @@ import json
 import logging
 from uuid import uuid4
 
+from sqlalchemy import and_
+
 from log import Msg
 from helper import Now, model_to_dict, Http_error
 from .model import Like
@@ -41,22 +43,39 @@ def add(db_session, data, username):
     return model_instance
 
 
-def get(post_id, db_session, username):
+def get(data, db_session):
+    if (data.get('post_id') is None) or (data.get('scroll') is None):
+        logging.error(Msg.DATA_MISSING+' post_id or scroll type')
+        raise Http_error(400,{'data':'post_id and scroll are required'})
+
     logging.info(Msg.START
-                 + "user is {}  ".format(username)
-                 + "getting like for post_id = {}".format(post_id))
+                 + "getting like for post_id = {}".format(data['post_id']))
     logging.debug(Msg.MODEL_GETTING)
-    model_instance = db_session.query(Like).filter(Like.post_id == post_id).first()
-    if model_instance:
-        logging.debug(Msg.GET_SUCCESS +
-                      json.dumps(model_to_dict(model_instance)))
+
+    if data.get('time') is None:
+        data['time'] = Now()
+    if data.get('count_number') is None:
+        data['count_number'] = 50
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400, {'scroll': Msg.SCROLL_UNDEFINED})
+
+    if data['scroll'] == 'down':
+        result = db_session.query(Like).filter(and_(Like.post_id ==
+                                                       data.get(
+                                                           'post_id'),
+                                                    Like.creation_date < data.get(
+                                                           'time'))).order_by(
+            Like.creation_date.desc()).limit(data.get('count_number')).all()
     else:
-        logging.error(Msg.GET_FAILED + json.dumps({"post_id": post_id}))
-        raise Http_error(404, Msg.NOT_FOUND)
+        result = db_session.query(Like).filter(
+            and_(Like.post_id == data.get('post_id'),
+                 Like.creation_date > data.get('time'))).order_by(
+            Like.creation_date.desc()).limit(data.get('count_number')).all()
 
     logging.info(Msg.END)
 
-    return model_instance
+    return result
 
 
 def delete(post_id, db_session, username):

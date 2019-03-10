@@ -69,6 +69,9 @@ class Msg:
     NAME_NOT_UNIQUE = 'name must be unique.this name already exists'
     NOT_UNIQUE = 'must be unique,change it please'
     NOT_ACCESSED ='this user can not access to this section'
+    INVALID_TAG = 'tag with this title doesnt exists.'
+    INVALID_CATEGORY = 'category with this title doesnt exists'
+    SCROLL_UNDEFINED = 'scrolling mood is undefined.it should be up or down'
 
 
 #
