@@ -44,6 +44,12 @@ def add(db_session, data):
     model_instance.creation_date = Now()
     model_instance.creator = data.get('cell_no')
 
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
+
     logging.debug(Msg.DATA_ADDITION)
 
     db_session.add(model_instance)
@@ -142,6 +148,14 @@ def edit(id, db_session, data, username):
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
         raise Http_error(404, {"id":Msg.NOT_FOUND})
+
+    if data.get('tags') is not None:
+        tags = (data.get('tags')).split(',')
+        for item in tags:
+            item.strip()
+        model_instance.tags = tags
+
+        del data['tags']
 
     for key, value in data.items():
         # TODO  if key is valid attribute of class

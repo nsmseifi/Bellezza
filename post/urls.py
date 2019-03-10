@@ -9,7 +9,8 @@ def call_router(app):
     data_plus_wrappers.append(pass_data)
 
     app.route('/posts/<id>', 'GET', get, apply=[inject_db, jsonify])
-    app.route('/posts', 'GET', get_all, apply=[inject_db, jsonify])
+    app.route('/posts/_search', 'POST', get_all, apply=[inject_db, jsonify,
+                                                        pass_data])
     app.route('/posts/user/<username>', 'GET', get_user_posts,
               apply=[inject_db, jsonify])
     app.route('/posts/<id>', 'DELETE', delete, apply=[check_auth, inject_db])
