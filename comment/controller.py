@@ -8,6 +8,7 @@ from log import Msg
 from helper import Now, model_to_dict, Http_error
 from post.model import Post
 from user.controller import get_profile
+from event.controller import add as add_event
 from .model import Comment
 
 
@@ -30,6 +31,11 @@ def add(db_session, data, username):
 
 
     db_session.add(model_instance)
+
+    event_data = {'entity_name': 'Post', 'entity_id': post.id,
+                  'action': 'COMMENT', 'target': post.creator, }
+
+    add_event(event_data, username, db_session)
 
     logging.debug(Msg.DB_ADD + json.dumps(model_to_dict(model_instance)))
 
@@ -63,6 +69,11 @@ def delete(id, db_session, username):
 
     comment = db_session.query(Comment).filter(Comment.id == id).first()
 
+    post = db_session.query(Post).filter(Post.id == comment.post_id).first()
+    if post is None:
+        logging.error(Msg.NOT_FOUND+ ' post no longer exists')
+        raise Http_error(404,{'post':Msg.NOT_FOUND})
+
     if comment is None:
         logging.error(Msg.DELETE_FAILED + Msg.NOT_FOUND)
         raise Http_error(404, Msg.NOT_FOUND)
@@ -72,6 +83,11 @@ def delete(id, db_session, username):
         raise (403, Msg.ALTERING_AUTHORITY_FAILED)
 
     db_session.query(Comment).filter(Comment.id == id).delete()
+
+    event_data = {'entity_name': 'Post', 'entity_id': post.id,
+                  'action': 'DISCOMMENT', 'target': post.creator, }
+
+    add_event(event_data, username, db_session)
 
     logging.debug(Msg.DELETE_SUCCESS)
 
@@ -135,12 +151,19 @@ def edit(id, db_session, data, username):
 
     logging.debug(Msg.EDIT_REQUST)
 
+
+
     model_instance = get(id, db_session)
     if model_instance:
         logging.debug(Msg.MODEL_GETTING)
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
         raise Http_error(404, {'comment':Msg.NOT_FOUND})
+
+    post = db_session.query(Post).filter(Post.id == model_instance.post_id).first()
+    if post is None:
+        logging.error(Msg.NOT_FOUND + ' post no longer exists')
+        raise Http_error(404, {'post': Msg.NOT_FOUND})
 
     if model_instance.creator != username:
         logging.error(Msg.ALTERING_AUTHORITY_FAILED)
@@ -153,6 +176,11 @@ def edit(id, db_session, data, username):
     model_instance.modifier = username
 
     logging.debug(Msg.MODEL_ALTERED)
+
+    event_data = {'entity_name': 'Post', 'entity_id': post.id,
+                  'action': 'RECOMMENT', 'target': post.creator, }
+
+    add_event(event_data, username, db_session)
 
     logging.debug(Msg.EDIT_SUCCESS + json.dumps(model_to_dict(model_instance)))
 

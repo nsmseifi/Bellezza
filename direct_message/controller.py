@@ -9,6 +9,7 @@ from log import Msg
 from helper import Now, model_to_dict, Http_error, value, check_schema
 from .model import DirectMessage
 from user.controller import get_profile
+from event.controller import add as add_event
 
 
 def add(data, username, db_session):
@@ -34,6 +35,12 @@ def add(data, username, db_session):
 
     db_session.add(model_instance)
 
+    event_data = {'entity_name': 'DirectMessage', 'entity_id': model_instance.id,
+                  'action': 'ADD',
+                  'target': model_instance.reciever, }
+
+    add_event(event_data, username, db_session)
+
     logging.debug(Msg.DB_ADD)
 
     logging.info(Msg.END)
@@ -54,6 +61,8 @@ def get(direct_id, db_session, username):
         raise Http_error(404, {'id': Msg.NOT_FOUND})
 
     logging.info(Msg.END)
+
+    model_instance.seen =True
 
     return model_instance
 
@@ -79,6 +88,12 @@ def delete(direct_id, db_session, username):
 
     db_session.query(DirectMessage).filter(
         DirectMessage.id == direct_id).delete()
+
+    event_data = {'entity_name': 'DirectMessage', 'entity_id': model_instance.id,
+                  'action': 'DELETE',
+                  'target': model_instance.reciever, }
+
+    add_event(event_data, username, db_session)
 
     logging.debug(Msg.DELETE_SUCCESS)
 
@@ -115,11 +130,25 @@ def get_messages_by_recipient(db_session, username, data):
             DirectMessage.creation_date.desc()).limit(
             data.get('count_number')).all()
 
+    final_result = []
+
+    for message in result:
+        message.seen = True
+        message_creator = get_profile(message.creator, db_session)
+
+        creator = model_to_dict(message_creator)
+        del creator['password']
+
+        new_message = model_to_dict(message)
+
+        new_message['creator'] = creator
+        final_result.append(new_message)
+
     logging.debug(Msg.GET_SUCCESS)
 
     logging.info(Msg.END)
 
-    return result
+    return final_result
 
 
 def set_message_as_seen(direct_id, username, db_session):
@@ -181,6 +210,9 @@ def get_new_messages(db_session, data, username):
     if data.get('time') is None:
         data['time'] = Now()
 
+    if data.get('count_number') is None:
+        data['count_number'] = 50
+
     logging.debug(Msg.GET_ALL_REQUEST + 'new  unread DirectMessages...')
 
     if data.get('scroll') == 'down':
@@ -188,19 +220,34 @@ def get_new_messages(db_session, data, username):
             and_(DirectMessage.reciever == username,
                  DirectMessage.seen == False)).filter(
             DirectMessage.creation_date < data.get('time')).order_by(
-            DirectMessage.creation_date.desc()).all()
+            DirectMessage.creation_date.desc()).limit(
+            data.get('count_number')).all()
     else:
         result = db_session.query(DirectMessage).filter(
             and_(DirectMessage.reciever == username,
                  DirectMessage.seen == False)).filter(
             DirectMessage.creation_date > data.get('time')).order_by(
-            DirectMessage.creation_date.desc()).all()
+            DirectMessage.creation_date.desc()).limit(
+            data.get('count_number')).all()
+
+    final_result = []
+
+    for message in result:
+        message_creator = get_profile(message.creator, db_session)
+
+        creator = model_to_dict(message_creator)
+        del creator['password']
+
+        new_message = model_to_dict(message)
+
+        new_message['creator'] = creator
+        final_result.append(new_message)
 
     logging.debug(Msg.GET_SUCCESS)
 
     logging.info(Msg.END)
 
-    return result
+    return final_result
 
 
 def get_new_messages_count(db_session, username):

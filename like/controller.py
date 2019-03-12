@@ -8,6 +8,7 @@ from log import Msg
 from helper import Now, model_to_dict, Http_error
 from .model import Like
 from post.model import Post
+from event.controller import add as add_event
 
 
 def add(db_session, data, username):
@@ -36,6 +37,14 @@ def add(db_session, data, username):
     db_session.add(model_instance)
 
     post.likes += 1
+
+    event_data = {'entity_name':'Post',
+                  'entity_id':post.id,
+                  'action':'LIKE',
+                  'target':post.creator,
+                  }
+
+    add_event(event_data,username,db_session)
 
     logging.debug(Msg.DB_ADD + json.dumps(model_to_dict(model_instance)))
 
@@ -99,6 +108,12 @@ def delete(post_id, db_session, username):
     post = db_session.query(Post).filter(Post.id == post_id).first()
 
     post.likes -= 1
+
+    event_data = {'entity_name': 'Post', 'entity_id': post.id,
+                  'action': 'DISLIKE', 'target': post.creator, }
+
+    add_event(event_data, username, db_session)
+
     logging.debug(Msg.UNLIKED_POST.format(post_id, username))
 
     logging.debug(Msg.DELETE_SUCCESS)
