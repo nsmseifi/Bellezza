@@ -7,12 +7,14 @@ from bottle import static_file, response
 from sqlalchemy import func, and_
 from sqlalchemy.dialects.postgresql import Any
 
+from like.controller import liked_by_user
 from log import Msg
 from tag.controller import get as get_tag
 from category.controller import get as get_category
 from helper import Now, model_to_dict, Http_error, file_mime_type
 from repository.post_like import delete_post_likes
 from repository.post_comment import delete_post_comments, post_last_comment
+from user.controller import get_profile
 from .model import Post
 
 save_path = os.environ.get('save_path')
@@ -139,7 +141,7 @@ def delete(id, db_session, username):
     return {}
 
 
-def get_all(data,db_session):
+def get_all(data,db_session, username=None):
 
     if data.get('time') is None:
         data['time'] = Now()
@@ -165,6 +167,18 @@ def get_all(data,db_session):
 
     for item in result:
         post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+
+        post['creator'] = creator
         post['last_comment'] = post_last_comment(post['id'],db_session)
         final_result.append(post)
 
@@ -174,7 +188,7 @@ def get_all(data,db_session):
     return final_result
 
 
-def get_user_posts(data, db_session):
+def get_user_posts(data, db_session, username=None):
 
     logging.info(Msg.START )
     # result = db_session.query(Post).filter(Post.creator == username).order_by(
@@ -212,6 +226,19 @@ def get_user_posts(data, db_session):
 
     for item in result:
         post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator,db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
+
         post['last_comment'] = post_last_comment(post['id'],db_session)
         final_result.append(post)
 
@@ -221,7 +248,7 @@ def get_user_posts(data, db_session):
     return final_result
 
 
-def get_category_posts(data, db_session):
+def get_category_posts(data, db_session, username=None):
     logging.info(Msg.START)
 
     if data.get('time') is None:
@@ -253,6 +280,18 @@ def get_category_posts(data, db_session):
 
     for item in result:
         post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
         post['last_comment'] = post_last_comment(post['id'],db_session)
         final_result.append(post)
 
@@ -263,7 +302,7 @@ def get_category_posts(data, db_session):
     return final_result
 
 
-def get_tags_posts(data, db_session):
+def get_tags_posts(data, db_session, username = None):
     logging.info(Msg.START)
     tags = data.get('tags') or []
 
@@ -293,6 +332,18 @@ def get_tags_posts(data, db_session):
 
     for item in result:
         post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
         post['last_comment'] = post_last_comment(post['id'],db_session)
         final_result.append(post)
 

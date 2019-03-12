@@ -39,6 +39,41 @@ def check_auth(func):
 
     return wrapper
 
+def if_login(func):
+    def wrapper(*args, **kwargs):
+        logging.debug(Msg.AUTH_CHECKING)
+
+        kwargs['username'] = check_login()['username']
+
+        logging.debug(Msg.AUTH_SUCCEED)
+        logging.debug("user is {}".format(kwargs['username']))
+
+        rtn = func(*args, **kwargs)
+        return rtn
+
+    return wrapper
+
+def check_login():
+    db_session = get_db_session()
+    auth = request.get_header('Authorization')
+    if auth is None:
+        return {'username':None}
+
+    username, password = decode(auth)
+    print(username, password)
+
+    if password is None:
+        return model_to_dict(validate_token(username, db_session))
+
+    else:
+        user = db_session.query(User).filter(User.username == username,
+                                             User.password == password).first()
+
+        if user is None:
+            return {'username':None}
+        return model_to_dict(user)
+
+
 
 def check_Authorization():
     db_session = get_db_session()
@@ -209,3 +244,5 @@ def file_mime_type(filename):
     print(m)
 
     return str(m)
+
+

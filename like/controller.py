@@ -105,3 +105,10 @@ def delete(post_id, db_session, username):
     logging.info(Msg.END)
 
     return {}
+
+def liked_by_user(post_id, username,db_session):
+
+    result = db_session.query(Like).filter(
+        and_(Like.post_id == post_id,
+             Like.creator == username)).first()
+    return result

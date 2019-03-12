@@ -22,6 +22,7 @@ def post_last_comment(post_id, db_session):
         comment_creator = db_session.query(User).filter(
             User.username == last_comment.creator).first()
         comment['creator'] = model_to_dict(comment_creator)
+        del comment['creator']['password']
 
         logging.info(('post_id = {} , last_comment is : {}').format(post_id,
                                                       last_comment.message))
