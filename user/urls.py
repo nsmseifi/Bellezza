@@ -1,4 +1,4 @@
-from .controller import add, get, get_all, delete, edit, get_profile
+from .controller import add, get, get_all, delete, edit, get_profile, get_by_tag
 from helper import check_auth, inject_db, jsonify, pass_data
 
 
@@ -13,3 +13,5 @@ def call_router(app):
     app.route('/users', 'POST', add, apply=[inject_db,jsonify,pass_data])
     app.route('/users/<id>', 'PUT', edit, apply=data_plus_wrappers)
     app.route('/users/profile', 'GET', get_profile, apply=wrappers)
+    app.route('/users/_tags', 'POST', get_by_tag, apply=[inject_db,jsonify,
+                                                    pass_data])

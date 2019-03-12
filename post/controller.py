@@ -406,8 +406,8 @@ def edit(id, db_session, data, username):
     for key, value in data.items():
         # TODO  if key is valid attribute of class
         setattr(model_instance, key, value)
-        model_instance.modification_date = Now()
-        model_instance.modifier = username
+    model_instance.modification_date = Now()
+    model_instance.modifier = username
 
     logging.debug(Msg.MODEL_ALTERED)
     logging.debug(Msg.DB_ADD + json.dumps(model_to_dict(model_instance)))

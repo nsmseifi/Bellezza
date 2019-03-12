@@ -177,8 +177,8 @@ def edit(category_title, data, db_session, username):
     for key, value in data.items():
         # TODO  if key is valid attribute of class
         setattr(model_instance, key, value)
-        model_instance.modification_date = Now()
-        model_instance.modifier = username
+    model_instance.modification_date = Now()
+    model_instance.modifier = username
 
     logging.debug(Msg.EDIT_SUCCESS + json.dumps(model_to_dict(model_instance)))
 

@@ -15,5 +15,7 @@ class User(Base):
     modification_date = Column(Integer)
     modifier = Column(String)
     tags = Column(ARRAY(String))
+    avatar = Column(String)
+    bio = Column(String)
 
 
