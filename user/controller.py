@@ -89,7 +89,7 @@ def get_profile(username, db_session):
                       json.dumps(model_to_dict(model_instance)))
     else:
         logging.debug(Msg.MODEL_GETTING_FAILED)
-        raise Http_error(401, {"username":Msg.NOT_FOUND})
+        raise Http_error(404, {"user":Msg.NOT_FOUND})
 
     logging.info(Msg.END)
 

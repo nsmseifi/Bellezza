@@ -7,6 +7,7 @@ from sqlalchemy import and_
 from log import Msg
 from helper import Now, model_to_dict, Http_error
 from post.model import Post
+from user.controller import get_profile
 from .model import Comment
 
 
@@ -81,7 +82,7 @@ def delete(id, db_session, username):
 
 def get_all( data, db_session):
     logging.info(Msg.START  )
-
+    final_result=[]
     logging.debug(Msg.GET_ALL_REQUEST + "Comments...")
     post_id = data.get('post_id')
     post = db_session.query(Post).filter(Post.id == post_id).first()
@@ -108,11 +109,23 @@ def get_all( data, db_session):
                  Comment.creation_date > data.get('time'))).order_by(
             Comment.creation_date.desc()).limit(data.get('count_number')).all()
 
+    for item in result:
+        comment = model_to_dict(item)
+
+        comment_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(comment_user)
+        del creator['password']
+
+        comment['creator'] = creator
+        final_result.append(comment)
+
+
+
     logging.debug(Msg.GET_SUCCESS)
 
     logging.info(Msg.END)
 
-    return result
+    return final_result
 
 
 def edit(id, db_session, data, username):
@@ -136,8 +149,8 @@ def edit(id, db_session, data, username):
     for key, value in data.items():
         # TODO  if key is valid attribute of class
         setattr(model_instance, key, value)
-        model_instance.modification_date = Now()
-        model_instance.modifier = username
+    model_instance.modification_date = Now()
+    model_instance.modifier = username
 
     logging.debug(Msg.MODEL_ALTERED)
 

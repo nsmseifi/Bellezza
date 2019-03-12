@@ -246,3 +246,13 @@ def file_mime_type(filename):
     return str(m)
 
 
+def check_schema(required_list,data_keys):
+    required = set(required_list)
+    keys= set(data_keys)
+
+    result = required.issubset(keys)
+
+    if result==False:
+        raise Http_error(400,{'data':'{} are required'.format(required_list)})
+
+    return result

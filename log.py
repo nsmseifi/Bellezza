@@ -72,6 +72,9 @@ class Msg:
     INVALID_TAG = 'tag with this title doesnt exists.'
     INVALID_CATEGORY = 'category with this title doesnt exists'
     SCROLL_UNDEFINED = 'scrolling mood is undefined.it should be up or down'
+    SCHEMA_CHECKED = 'schema checked for required data'
+    SET_SEEN_ERROR = 'username is not reciever of message and message cant set as seen'
+
 
 
 #

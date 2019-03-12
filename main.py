@@ -9,6 +9,7 @@ from comment.urls import call_router as comment_routes
 from register.urls import call_router as register_routes
 from category.urls import call_router as category_routes
 from tag.urls import call_router as tag_routes
+from direct_message.urls import call_router as direct_routes
 
 
 from helper import value
@@ -28,6 +29,7 @@ if __name__ == '__main__':
     register_routes(app)
     category_routes(app)
     tag_routes(app)
+    direct_routes(app)
 
     run(host=app_host, port=app_port, debug=True, app=app)
     print(request.json)

@@ -85,7 +85,7 @@ def add(db_session, data, username):
     return model_instance
 
 
-def get(id, db_session):
+def get(id, db_session, username = None):
     model_instance = db_session.query(Post).filter(Post.id == id).first()
     if model_instance:
         logging.info(Msg.MODEL_GETTING)

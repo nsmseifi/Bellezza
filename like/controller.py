@@ -95,7 +95,7 @@ def delete(post_id, db_session, username):
 
     # db_session.query(Like).filter(Like.post_id == post_id).filter(
     #     Like.creator == username).delete()
-    db_session.like.delete()
+    db_session.query(Like).filter(Like.post_id == post_id, Like.creator == username).delete()
     post = db_session.query(Post).filter(Post.id == post_id).first()
 
     post.likes -= 1
