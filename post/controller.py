@@ -7,10 +7,14 @@ from bottle import static_file, response
 from sqlalchemy import func, and_
 from sqlalchemy.dialects.postgresql import Any
 
+from like.controller import liked_by_user
 from log import Msg
+from tag.controller import get as get_tag
+from category.controller import get as get_category
 from helper import Now, model_to_dict, Http_error, file_mime_type
 from repository.post_like import delete_post_likes
 from repository.post_comment import delete_post_comments, post_last_comment
+from user.controller import get_profile
 from .model import Post
 
 save_path = os.environ.get('save_path')
@@ -36,12 +40,23 @@ def add(db_session, data, username):
         tags = (data.get('tags')).split(',')
         for item in tags:
             item.strip()
+            tag = get_tag(item, db_session)
+            if item != tag.title:
+                logging.error(Msg.INVALID_TAG)
+                raise Http_error(404, {item: Msg.INVALID_TAG})
+
         model_instance.tags = tags
 
     categories = (data.get('category')).split(',')
     for item in categories:
         item.strip()
+        category = get_category(item, db_session)
+        if item != category.title:
+            logging.error(Msg.INVALID_TAG)
+            raise Http_error(404, {item: Msg.INVALID_CATEGORY})
+
     model_instance.category = categories
+
 
     # logging.debug(Msg.DATA_ADDITION+"  || Data :"+json.dumps(data))
     if ('upload' not in data) or (data['upload'] is None):
@@ -70,7 +85,7 @@ def add(db_session, data, username):
     return model_instance
 
 
-def get(id, db_session):
+def get(id, db_session, username = None):
     model_instance = db_session.query(Post).filter(Post.id == id).first()
     if model_instance:
         logging.info(Msg.MODEL_GETTING)
@@ -126,17 +141,24 @@ def delete(id, db_session, username):
     return {}
 
 
-def get_all(data,db_session):
+def get_all(data,db_session, username=None):
 
     if data.get('time') is None:
         data['time'] = Now()
     if data.get('count') is None:
         data['count'] = 50
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400,{'scroll': Msg.SCROLL_UNDEFINED})
 
-    result = db_session.query(Post).filter(Post.creation_date < data.get(
-                                                       'time')).order_by(
-        Post.creation_date.desc()).limit(data.get('count')).all()
-
+    if data['scroll'] == 'down':
+        result = db_session.query(Post).filter(Post.creation_date < data.get(
+                                                           'time')).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+    else:
+        result = db_session.query(Post).filter(
+            Post.creation_date > data.get('time')).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
 
     final_result = []
     if result is None:
@@ -145,7 +167,19 @@ def get_all(data,db_session):
 
     for item in result:
         post = model_to_dict(item)
-        post.update(post_last_comment(post['id'],db_session))
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+
+        post['creator'] = creator
+        post['last_comment'] = post_last_comment(post['id'],db_session)
         final_result.append(post)
 
     logging.debug(Msg.GET_SUCCESS)
@@ -154,53 +188,170 @@ def get_all(data,db_session):
     return final_result
 
 
-def get_user_posts(db_session, username):
-    logging.info(Msg.START + "user is {}".format(username))
-    result = db_session.query(Post).filter(Post.creator == username).order_by(
-        Post.creation_date.desc()).all()
+def get_user_posts(data, db_session, username=None):
 
+    logging.info(Msg.START )
+    # result = db_session.query(Post).filter(Post.creator == username).order_by(
+    #     Post.creation_date.desc()).all()
+
+    if data.get('time') is None:
+        data['time'] = Now()
+    if data.get('count') is None:
+        data['count'] = 50
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400,{'scroll': Msg.SCROLL_UNDEFINED})
+
+    if data.get('creator') is None:
+        logging.error(Msg.DATA_MISSING + 'creator is required')
+        raise Http_error((400,{'creator':Msg.DATA_MISSING}))
+
+    if data['scroll'] == 'down':
+        result = db_session.query(Post).filter(and_(
+            Post.creator== data.get('creator'),Post.creation_date <
+                                                    data.get(
+                                                           'time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+    else:
+        result = db_session.query(Post).filter(and_(Post.creator == username,
+                                                    Post.creation_date >
+                                                    data.get(
+                                                        'time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+
+    final_result = []
     if result is None:
-        logging.error(Msg.GET_FAILED)
-        raise Http_error(404, {'post': Msg.NOT_FOUND})
+        logging.error(Msg.NOT_FOUND)
+        raise Http_error(400, {'post': Msg.NOT_FOUND})
+
+    for item in result:
+        post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator,db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
+
+        post['last_comment'] = post_last_comment(post['id'],db_session)
+        final_result.append(post)
 
     logging.debug(Msg.GET_SUCCESS)
 
     logging.debug(Msg.END)
-    return result
+    return final_result
 
 
-def get_category_posts(category_id, db_session):
+def get_category_posts(data, db_session, username=None):
     logging.info(Msg.START)
 
-    result = db_session.query(Post).filter(
-        Post.category.op('@>')([category_id])).order_by(
-        Post.creation_date.desc()).all()
+    if data.get('time') is None:
+        data['time'] = Now()
+    if data.get('count') is None:
+        data['count'] = 50
+    category = []
+    if data.get('category'):
+        category = data['category']
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400,{'scroll': Msg.SCROLL_UNDEFINED})
 
+    if data['scroll'] == 'down':
+        result = db_session.query(Post).filter(
+            and_(Post.category.op('@>')(category),
+                Post.creation_date < data.get('time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+    else:
+        result = db_session.query(Post).filter(
+            and_(Post.category.op('@>')(category),
+                 Post.creation_date > data.get('time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+
+    final_result = []
     if result is None:
-        logging.error(Msg.GET_FAILED)
-        raise Http_error(404, {'post': Msg.NOT_FOUND})
+        logging.error(Msg.NOT_FOUND)
+        raise Http_error(400, {'post': Msg.NOT_FOUND})
+
+    for item in result:
+        post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
+        post['last_comment'] = post_last_comment(post['id'],db_session)
+        final_result.append(post)
+
 
     logging.debug(Msg.GET_SUCCESS)
 
     logging.debug(Msg.END)
-    return result
+    return final_result
 
 
-def get_tags_posts(data, db_session):
+def get_tags_posts(data, db_session, username = None):
     logging.info(Msg.START)
     tags = data.get('tags') or []
 
-    result = db_session.query(Post).filter(Post.tags.op('@>')(tags)).order_by(
-        Post.creation_date.desc()).all()
+    if data.get('time') is None:
+        data['time'] = Now()
+    if data.get('count') is None:
+        data['count'] = 50
+    if data.get('scroll') is None:
+        logging.error(Msg.SCROLL_UNDEFINED)
+        raise Http_error(400,{'scroll': Msg.SCROLL_UNDEFINED})
+    if data['scroll'] == 'down':
+        result = db_session.query(Post).filter(
+            and_(Post.tags.op('@>')(tags),
+                Post.creation_date < data.get('time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
+    else:
+        result = db_session.query(Post).filter(and_(Post.tags.op('@>')(tags),
+                                                    Post.creation_date >
+                                                    data.get(
+                                                        'time'))).order_by(
+            Post.creation_date.desc()).limit(data.get('count')).all()
 
+    final_result = []
     if result is None:
-        logging.error(Msg.GET_FAILED)
-        raise Http_error(404, {'post': Msg.NOT_FOUND})
+        logging.error(Msg.NOT_FOUND)
+        raise Http_error(400, {'post': Msg.NOT_FOUND})
+
+    for item in result:
+        post = model_to_dict(item)
+        if username is None:
+            post['user_liked'] = False
+        else:
+            liked = liked_by_user(item.id,username,db_session)
+            if liked :
+                post['user_liked'] = True
+
+        post_user = get_profile(item.creator, db_session)
+        creator = model_to_dict(post_user)
+        del creator['password']
+
+        post['creator'] = creator
+        post['last_comment'] = post_last_comment(post['id'],db_session)
+        final_result.append(post)
+
 
     logging.debug(Msg.GET_SUCCESS)
 
     logging.debug(Msg.END)
-    return result
+    return final_result
 
 
 def edit(id, db_session, data, username):
@@ -229,13 +380,22 @@ def edit(id, db_session, data, username):
         tags = (data.get('tags')).split(',')
         for item in tags:
             item.strip()
+            tag = get_tag(item, db_session)
+            if item != tag.title:
+                logging.error(Msg.INVALID_TAG)
+                raise Http_error(404, {item: Msg.INVALID_TAG})
+
         model_instance.tags = tags
 
     categories = (data.get('category')).split(',')
     for item in categories:
         item.strip()
-    model_instance.category = categories
+        category = get_category(item, db_session)
+        if item != category.title:
+            logging.error(Msg.INVALID_TAG)
+            raise Http_error(404, {item: Msg.INVALID_CATEGORY})
 
+    model_instance.category = categories
     del (data['category'])
     del (data['tags'])
 
